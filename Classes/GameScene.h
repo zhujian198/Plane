@@ -14,7 +14,8 @@ public:
 	{
 		HERO_TAG = 100,
 		ENEMY_TAG = 101,
-		HERO_BULLET_TAG = 102
+		HERO_BULLET_TAG = 102,
+		SCORE_LABEL = 103
 	};
 
 	//碰撞事件bit位
@@ -48,30 +49,39 @@ public:
 	static Scene* createScene();
 	CREATE_FUNC(GameScene);
 	bool init();
-
-	static GameScene* sharedGameLayer() { return m_gamelayer; }
 	
 public:
-	SpriteBatchNode* getBulletBox() { return m_bulletBox; }	
+	static GameScene* sharedGameLayer() { return m_gamelayer; } //获取该游戏层单例对象
 
 private:
-	int m_score; //存放获得的分数
-	Label* m_scorelabel; //分数栏
-
-	int m_bossnum; //表示场景里面大型战机的数目，由于太大，一个场景就放一个。关于大型战机数目的清除，采用的是一种不智能的方式，即每隔多少秒重置一次数目，而不是在击落或出界后重置。
-	void resetBossNum(float dt) { if (m_bossnum > 0) m_bossnum = 0; }
-
-	int m_level; //当前游戏level
-	SpriteBatchNode *m_bulletBox; //存放子弹的一个集合
 	static GameScene* m_gamelayer; //游戏场景层的单例对象
 
-	void playBackground();
-	void pauseButtonCallBack(Ref* pSender);
-	bool dealWithContact(PhysicsContact&); //处理碰撞事件
+public:
+	SpriteBatchNode* getBulletBox() { return m_bulletBox; }	 //获取子弹渲染器
+
+private:
+	SpriteBatchNode *m_bulletBox; //存放子弹的渲染器
+
+private:
+	int m_level; //当前游戏level
+	int m_score; //当前游戏分数
+
+private:
+	void playBackground(); //创建并移动游戏背景
+	void publishScore(); //存储游戏分数
 	void gameover();
+
+	void pauseButtonCallBack(Ref* pSender); //点击暂停按钮回调函数
+
+	bool dealWithContact(PhysicsContact&); //物理碰撞事件回调函数
+
+	//以下是游戏中schedule的回调函数
 	void testLevel(float dt); //每秒调用一次，根据分数设置游戏level
-	void refreshAnEnemy(float dt); 
-	void publishScore(); //存储最后一次分数
+	void refreshAnEnemy(float dt); //刷新一架敌方战机
+
+	//m_canBossRefresh表示可否刷新boss，每隔dt秒可以刷新一次
+	bool m_canBossRefresh; 
+	void resetBoss(float dt) { if (!m_canBossRefresh) m_canBossRefresh = true; }
 };
 
 #endif

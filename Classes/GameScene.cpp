@@ -8,7 +8,7 @@ using namespace CocosDenshion;
 
 GameScene* GameScene::m_gamelayer = nullptr;
 
-const float GameScene::refresh_delay[] = {2.0, 1.5, 1.0, 0.5};
+const float GameScene::refresh_delay[] = {2.0, 1.5, 1.0, 0.5}; //战机刷新间隔
 
 Scene* GameScene::createScene()
 {
@@ -16,10 +16,8 @@ Scene* GameScene::createScene()
 	auto scene = Scene::createWithPhysics();
 	scene->getPhysicsWorld()->setGravity(Vect(0, 0));
 
-	auto layer = GameScene::create();
-	scene->addChild(layer);
-
-	m_gamelayer = layer;  //给单例对象赋值
+	m_gamelayer = GameScene::create();
+	scene->addChild(m_gamelayer);
 
 	return scene;
 }
@@ -35,7 +33,7 @@ bool GameScene::init()
 	SpriteFrameCache::getInstance()->addSpriteFramesWithFile("shoot.plist");
 	SpriteFrameCache::getInstance()->addSpriteFramesWithFile("shoot_background.plist");
 
-	//加载音乐
+	//加载音乐，播放背景音乐
 	auto audioengine = SimpleAudioEngine::getInstance();
 	audioengine->preloadBackgroundMusic("sound/bgmusic.mp3");
 	audioengine->preloadEffect("sound/shoot.wav");
@@ -47,7 +45,7 @@ bool GameScene::init()
 
 	audioengine->playBackgroundMusic("sound/bgmusic.mp3", true);
 
-	//播放背景
+	//播放背景图
 	playBackground();
 
 	//加入暂停按钮
@@ -67,10 +65,10 @@ bool GameScene::init()
 
 	//加入一个分数栏
 	m_score = 0;
-	m_scorelabel = Label::createWithSystemFont("Score: 0", "Arial", 36);
-	m_scorelabel->setAnchorPoint(Vec2(0, 0));
-	m_scorelabel->setPosition(Vec2(0, winSize.height - m_scorelabel->getContentSize().height)); //位于右上角
-	addChild(m_scorelabel, 10);
+	auto scorelabel = Label::createWithSystemFont("Score: 0", "Arial", 36);
+	scorelabel->setAnchorPoint(Vec2(0, 0));
+	scorelabel->setPosition(Vec2(0, winSize.height - scorelabel->getContentSize().height)); //位于右上角
+	addChild(scorelabel, 10, SCORE_LABEL);
 
 	//加入我方战机，初始位置设定在下方中点
 	auto hero = PlaneHero::create();
@@ -89,7 +87,8 @@ bool GameScene::init()
 	auto touchlistener = EventListenerTouchOneByOne::create();
 	touchlistener->setSwallowTouches(true);
 	touchlistener->onTouchBegan = [this](Touch *pTouch, Event*) {
-		/*
+		/* 
+		 * 如果要触摸着飞机移动，关闭该注释，否则滑动屏幕即可移动
 		auto hero = (PlaneHero*)getChildByTag(HERO_TAG);
 		if (hero->boundingBox().containsPoint(pTouch->getLocation()))
 		{
@@ -101,7 +100,7 @@ bool GameScene::init()
 		return true;
 	};
 	touchlistener->onTouchMoved = [this](Touch* pTouch, Event*) {
-		auto delta = pTouch->getDelta() / 5;
+		auto delta = pTouch->getDelta() / 3;
 		auto hero = (PlaneHero*)getChildByTag(HERO_TAG);
 		auto oldpos = hero->getPosition(); //用来重置出界后的位置
 
@@ -122,35 +121,18 @@ bool GameScene::init()
 	contactlistener->onContactBegin = CC_CALLBACK_1(GameScene::dealWithContact, this);
 	_eventDispatcher->addEventListenerWithSceneGraphPriority(contactlistener, this);	
 
-	//开启Level检测，根据检测出的Level调整战机的刷新速度和战机的刷新种类
+	//开启Level检测，根据检测出的Level调整战机的刷新速度
 	m_level = LEVEL1;
 	schedule(schedule_selector(GameScene::testLevel), 1.0f);
 
-	//初始刷新间隔1秒
+	//设置初始敌机刷新间隔并开始刷新
 	schedule(schedule_selector(GameScene::refreshAnEnemy), refresh_delay[0]);
-	m_bossnum = 0;
-	schedule(schedule_selector(GameScene::resetBossNum), 5.0f); //5秒重置一次boss战机数目
+	
+	//每隔5秒可以刷新一次boss战机
+	m_canBossRefresh = true;
+	schedule(schedule_selector(GameScene::resetBoss), 5.0f); 
 
 	return true;
-}
-
-void GameScene::pauseButtonCallBack(Ref* pSender)
-{
-	//log("press pause button!");
-	static int i = 0;
-	if (0 == i)
-	{
-		i = 1;
-		//暂停游戏并关闭事件监听（Director的暂停并没有为我们关闭事件监听，因此还需要手动关闭）
-		_eventDispatcher->pauseEventListenersForTarget(this);
-		Director::getInstance()->pause();
-	}
-	else
-	{
-		i = 0;
-		_eventDispatcher->resumeEventListenersForTarget(this);
-		Director::getInstance()->resume();
-	}
 }
 
 void GameScene::playBackground()
@@ -159,7 +141,7 @@ void GameScene::playBackground()
 
 	int delta = 10; //补缝用的，两个背景紧挨着移动可能出现缝隙
 
-	//播放背景
+	//播放背景，两个背景的图片是一样的，紧挨着循环播放
 	auto bg1 = Sprite::createWithSpriteFrameName("background.png");
 	bg1->setScaleX(winSize.width / bg1->getContentSize().width);
 	bg1->setScaleY(winSize.height / bg1->getContentSize().height);
@@ -188,10 +170,54 @@ void GameScene::playBackground()
 	bg2->runAction(RepeatForever::create(action2));
 }
 
+void GameScene::publishScore()
+{
+	auto userdefault = UserDefault::getInstance();
+	
+	//查看路径，测试用
+	//log(userdefault->getXMLFilePath().c_str()); 
+	
+	//存储本次游戏分数
+	char score_str[100] = {0};
+	sprintf(score_str, "%d", m_score);
+	userdefault->setStringForKey("LastScore", score_str);
+
+	//存储最佳游戏分数
+	auto bestscore = userdefault->getStringForKey("BestScore");
+	if (m_score > atoi(bestscore.c_str()))
+		userdefault->setStringForKey("BestScore", score_str);
+}
+
+void GameScene::gameover()
+{
+	publishScore(); //存储游戏分数
+	auto scene = TransitionFade::create(2.0, GameOverScene::createScene());
+	Director::getInstance()->replaceScene(scene);
+}
+
+void GameScene::pauseButtonCallBack(Ref* pSender)
+{
+	//log("press pause button!");
+	static int i = 0;
+	if (0 == i)
+	{
+		i = 1;
+		//暂停游戏并关闭事件监听（Director的暂停并没有为我们关闭事件监听，因此还需要手动关闭）
+		_eventDispatcher->pauseEventListenersForTarget(this);
+		Director::getInstance()->pause();
+	}
+	else
+	{
+		i = 0;
+		_eventDispatcher->resumeEventListenersForTarget(this);
+		Director::getInstance()->resume();
+	}
+}
+
 bool GameScene::dealWithContact(PhysicsContact& contact)
 {
 	//log("contact begin!");
-
+	//获取两个碰撞的节点
 	auto node1 = contact.getShapeA()->getBody()->getNode();
 	auto node2 = contact.getShapeB()->getBody()->getNode();
 
@@ -225,9 +251,11 @@ bool GameScene::dealWithContact(PhysicsContact& contact)
 			m_score += enemy->getPoints();
 			char buf[100] = {0};
 			sprintf(buf, "Score: %d", m_score);
-			m_scorelabel->setString(buf);
+			auto scorelabel = (Label*)this->getChildByTag(SCORE_LABEL);
+			scorelabel->setString(buf);
 
 			enemy->getPhysicsBody()->setContactTestBitmask(0x0); //设置碰撞标志位，不再发生碰撞事件
+			
 			//让敌机爆炸，然后移除出渲染树，分为两个动作按次序执行
 			auto callfunc = CallFunc::create([enemy]()
 			{
@@ -276,9 +304,11 @@ bool GameScene::dealWithContact(PhysicsContact& contact)
 			m_score += enemy->getPoints();
 			char buf[100] = {0};
 			sprintf(buf, "Score: %d", m_score);
-			m_scorelabel->setString(buf);
+			auto scorelabel = (Label*)this->getChildByTag(SCORE_LABEL);
+			scorelabel->setString(buf);
 
 			enemy->getPhysicsBody()->setContactTestBitmask(0x0); //设置碰撞标志位，不再发生碰撞事件
+			
 			//让敌机爆炸，然后移除出渲染树，分为两个动作按次序执行
 			auto callfunc = CallFunc::create([enemy]()
 			{
@@ -290,13 +320,6 @@ bool GameScene::dealWithContact(PhysicsContact& contact)
 	}
 
 	return true;
-}
-
-void GameScene::gameover()
-{
-	publishScore(); //存储本次游戏分数
-	auto scene = GameOverScene::createScene();
-	Director::getInstance()->replaceScene(scene);
 }
 
 void GameScene::testLevel(float dt)
@@ -339,6 +362,7 @@ void GameScene::refreshAnEnemy(float dt)
 
 	int enemy_type = PlaneEnemy::Enemy1;
 
+	//根据游戏Level选择性随机刷新不同种类的战机
 	switch (m_level)
 	{
 	case LEVEL1:
@@ -348,14 +372,14 @@ void GameScene::refreshAnEnemy(float dt)
 		break;
 	case LEVEL3:
 		enemy_type = random(0, 2);
-		if (m_bossnum < 1)
-			m_bossnum++;
+		if (m_canBossRefresh && enemy_type == 2) //如果刷新出boss战机，那么禁止其继续刷新，直到该禁止标志被重置
+			m_canBossRefresh = false;
 		else enemy_type = random(0, 1);
 		break;
 	case LEVEL4:
 		enemy_type = random(0, 3);
-		if (m_bossnum < 1)
-			m_bossnum++;
+		if (m_canBossRefresh && enemy_type >= 2)
+			m_canBossRefresh = false;
 		else enemy_type = random(0, 1);
 		break;
 	}
@@ -371,25 +395,8 @@ void GameScene::refreshAnEnemy(float dt)
 
 	//给敌机一个body
 	auto enemybody = PhysicsBody::createBox(enemy->getContentSize());
-	enemybody->setCollisionBitmask(0x0); //不进行碰撞模拟，因为不需要。
+	enemybody->setCollisionBitmask(0x0); //不进行碰撞模拟，因为不需要
 	enemybody->setContactTestBitmask(ContactMaskBit::ENEMY_CONTACTMASKBIT);
 	enemy->setPhysicsBody(enemybody);
 }
 
-void GameScene::publishScore()
-{
-	auto userdefault = UserDefault::getInstance();
-	
-	//查看路径，测试用
-	//log(userdefault->getXMLFilePath().c_str()); 
-	
-	//存储本次游戏分数
-	char score_str[100] = {0};
-	sprintf(score_str, "%d", m_score);
-	userdefault->setStringForKey("LastScore", score_str);
-
-	//存储最佳游戏分数
-	auto bestscore = userdefault->getStringForKey("BestScore");
-	if (m_score > atoi(bestscore.c_str()))
-		userdefault->setStringForKey("BestScore", score_str);
-}

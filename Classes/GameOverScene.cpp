@@ -17,7 +17,7 @@ bool GameOverScene::init()
 
 	auto winSize = Director::getInstance()->getWinSize();
 
-	//背景
+	//添加背景
 	auto bg = Sprite::createWithSpriteFrameName("gameover.png");
 	bg->setScaleX(winSize.width / bg->getContentSize().width);
 	bg->setScaleY(winSize.height / bg->getContentSize().height);
@@ -34,7 +34,7 @@ bool GameOverScene::init()
 	auto menu = Menu::create(backItem, nullptr);
 	addChild(menu);
 
-	//本次分数
+	//显示本次分数，位于中间
 	auto score = UserDefault::getInstance()->getStringForKey("LastScore");
 
 	auto labelscore = Label::createWithTTF(score, "fonts/Marker Felt.ttf", 36);
@@ -42,7 +42,7 @@ bool GameOverScene::init()
 	labelscore->setPosition(Vec2(winSize.width / 2, winSize.height / 2 + 50));
 	addChild(labelscore);
 	
-	//最佳分数s
+	//显示最佳分数，位于左上
 	auto bestscore = UserDefault::getInstance()->getStringForKey("BestScore");
 
 	auto labelbestscore = Label::createWithSystemFont(bestscore, "Arial", 36);
@@ -57,5 +57,5 @@ void GameOverScene::onBackItemCallback(Ref*)
 {
 	//返回游戏
 	auto scene = GameScene::createScene();
-	Director::getInstance()->replaceScene(scene);
+	Director::getInstance()->replaceScene(TransitionFade::create(2, scene));
 }

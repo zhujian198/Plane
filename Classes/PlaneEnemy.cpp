@@ -5,7 +5,7 @@ using namespace CocosDenshion;
 
 PlaneEnemy* PlaneEnemy::createWithEnemyType(int planetype)
 {
-	//自定义一个工厂方法，传入一个精灵帧的名字，该帧一定是在游戏进入时候加载完毕的
+	//自定义一个工厂方法，根据传入的战机类型，初始化敌方战机
 	auto plane = new PlaneEnemy();
 	if (plane && plane->init(planetype))
 	{
@@ -26,7 +26,7 @@ bool PlaneEnemy::init(int planetype)
 	m_planeType = planetype;
 	m_live = true;
 	
-	//初始化纹理图，战机速度
+	//初始化纹理图，战机速度，生命，分值
 	String framename;
 	switch (planetype)
 	{
@@ -55,21 +55,10 @@ bool PlaneEnemy::init(int planetype)
 		m_points = Enemy4_Points;
 		break;
 	}
-
 	initWithSpriteFrameName(framename.getCString());
 
 	//加载敌人爆炸精灵帧集合
 	initEnemyBlowUpFrames(planetype);
-
-	/*
-	 *暂时不做子弹功能功能
-	//初始化子弹发射器，它是一个SpriteBatchNode
-	bulletBox = SpriteBatchNode::createWithTexture(getTexture()); //这里获得的是一张纹理大图（整张png）
-	//下面两个代码设置了发射器的位置，位于飞机底部中间
-	bulletBox->setPosition(Vec2(getContentSize().width / 2, 0));
-	bulletBox->setAnchorPoint(Vec2(0, 0));
-	addChild(bulletBox);
-	*/
 
 	return true;
 }
@@ -78,17 +67,45 @@ void PlaneEnemy::onEnter()
 {
 	Sprite::onEnter();
 
-	/*
-	 *暂时不做敌机发射功能
+	schedule(schedule_selector(PlaneEnemy::moveOn)); //战机进入后，开始移动
+}
 
-	//进入后，开始发射子弹，每HERO_BULLET_RATIO秒发射一发
-	schedule(schedule_selector(PlaneEnemy::beginShooting), HERO_BULLET_RATIO);
-	//检查子弹是否出界，出界则清除出bulletBox
-	schedule(schedule_selector(PlaneEnemy::removeBullet), 0.1);
-	
-	*/
+FiniteTimeAction* PlaneEnemy::getBlowUpAction()
+{
+	//这里直接播放音效设计的不好，因为其它类调用后不一定马上执行动作。不过一般是马上执行的，所以影响不大。
+	switch (m_planeType)
+	{
+	case Enemy1:
+		SimpleAudioEngine::getInstance()->playEffect("sound/enemy1_down.wav");
+		break;
+	case Enemy2:
+		SimpleAudioEngine::getInstance()->playEffect("sound/enemy2_down.wav");
+		break;
+	case Enemy3:
+		SimpleAudioEngine::getInstance()->playEffect("sound/enemy3_down.wav");
+		break;
+	case Enemy4:
+		SimpleAudioEngine::getInstance()->playEffect("sound/enemy3_down.wav");
+		break;
+	}
 
-	schedule(schedule_selector(PlaneEnemy::moveOn));
+	//加载死亡动画
+	auto animation = Animation::createWithSpriteFrames(m_blowframes);
+	animation->setDelayPerUnit(0.2);
+	animation->setRestoreOriginalFrame(true);
+	auto blowUp = Animate::create(animation);
+
+	return blowUp;
+}
+
+void PlaneEnemy::getHurt()
+{
+	m_life--;
+	if (m_life == 0)
+	{
+		m_live = false;
+		return;
+	}
 }
 
 void PlaneEnemy::initEnemyBlowUpFrames(int planetype)
@@ -117,92 +134,6 @@ void PlaneEnemy::initEnemyBlowUpFrames(int planetype)
 		m_blowframes.pushBack(SpriteFrameCache::getInstance()->getSpriteFrameByName("enemy3_down5.png"));
 		m_blowframes.pushBack(SpriteFrameCache::getInstance()->getSpriteFrameByName("enemy3_down6.png"));
 	}
-}
-
-/* 
- *暂时不做子弹发射功能
-
-void PlaneEnemy::beginShooting(float dt)
-{
-	//log("a bullet shoot!");
-	auto bullet = Sprite::createWithSpriteFrameName(HERO_BULLET_IMG);
-	bulletBox->addChild(bullet);
-
-	//给子弹套一个body，加一个初始速度，让其射到物理世界中
-	auto body = PhysicsBody::createBox(bullet->getContentSize(), PhysicsMaterial(0, 0, 0));
-	body->setm_velocity(HERO_BULLET_VEC); 
-
-	bullet->setPhysicsBody(body);
-}
-
-void PlaneEnemy::removeBullet(float dt)
-{
-	//遍历每一颗子弹，把出界的删除
-	auto vec = bulletBox->getChildren();
-	for (auto &bullet : vec)
-	{
-		auto posInNode = bullet->getPosition();
-		//由于bullet处于bulletBox的模型坐标系，因此要转化成世界坐标系
-		auto posInWorld = bulletBox->convertToWorldSpace(posInNode);
-		if (posInWorld.y > Director::getInstance()->getVisibleSize().height)
-		{
-			bulletBox->removeChild(bullet, true);
-			//log("a bullet remove!");
-		}
-	}
-}
-
-void PlaneEnemy::stopShooting()
-{
-	unschedule(schedule_selector(PlaneEnemy::beginShooting));
-}
-*/
-
-bool PlaneEnemy::isLive()
-{
-	return m_live;
-}
-
-int PlaneEnemy::getPoints()
-{
-	return m_points;
-}
-
-void PlaneEnemy::getHurt()
-{
-	m_life--;
-	if (m_life == 0)
-	{
-		m_live = false;
-		return;
-	}
-}
-
-FiniteTimeAction* PlaneEnemy::getBlowUpAction()
-{
-	switch (m_planeType)
-	{
-	case Enemy1:
-		SimpleAudioEngine::getInstance()->playEffect("sound/enemy1_down.wav");
-		break;
-	case Enemy2:
-		SimpleAudioEngine::getInstance()->playEffect("sound/enemy2_down.wav");
-		break;
-	case Enemy3:
-		SimpleAudioEngine::getInstance()->playEffect("sound/enemy3_down.wav");
-		break;
-	case Enemy4:
-		SimpleAudioEngine::getInstance()->playEffect("sound/enemy3_down.wav");
-		break;
-	}
-
-	//加载死亡动画
-	auto animation = Animation::createWithSpriteFrames(m_blowframes);
-	animation->setDelayPerUnit(0.2);
-	animation->setRestoreOriginalFrame(true);
-	auto blowUp = Animate::create(animation);
-
-	return blowUp;
 }
 
 void PlaneEnemy::moveOn(float dt)

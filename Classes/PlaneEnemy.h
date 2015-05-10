@@ -49,28 +49,23 @@ public:
 	void onEnter();
 
 public:
-	void initEnemyBlowUpFrames(int planetype); //加载爆炸纹理图集
-
-	//暂时不做敌机的子弹发射功能
-	/*
-	void beginShooting(float dt); //开始发射子弹，间隔dt秒发射一发
-	void removeBullet(float dt); //移除射到屏幕外面的子弹
-	void stopShooting(); //停止发射子弹
-	*/
-	FiniteTimeAction* getBlowUpAction(); //飞机爆炸
+	FiniteTimeAction* getBlowUpAction(); //获得飞机爆炸的动作
 	void getHurt(); //飞机被击中一次
-	bool isLive(); //返回飞机是否还活着
-	int getPoints();
+	bool isLive() { return m_live; }; 
+	int getPoints() { return m_points; }
 	int getType() { return m_planeType; }
 
-	void moveOn(float dt); //每dt秒移动一段距离
+private:
+	void initEnemyBlowUpFrames(int planetype); //加载爆炸纹理图集
+	void moveOn(float dt); //schedule回调，每dt秒移动一段距离
 
 private:
 	int m_velocity; //战机速度
-	int m_life; //战机生命
-	int m_points;
+	int m_life; //战机当前生命
+	int m_points; //战机分值
 	int m_planeType; //敌机机型
 	bool m_live; //飞机是否活着的标志
+
 	Vector<SpriteFrame*> m_blowframes; //存放爆炸纹理精灵帧
 };
 
