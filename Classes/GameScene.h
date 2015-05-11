@@ -39,9 +39,9 @@ public:
 	//level提升所需的分数
 	enum LevelUp_Score
 	{
-		Level1Up_Score = 100,
-		Level2Up_Score = 500,
-		Level3Up_Score = 1000
+		Level1Up_Score = 50,
+		Level2Up_Score = 200,
+		Level3Up_Score = 500
 	};
 
 	static const float refresh_delay[]; //战机刷新间隔

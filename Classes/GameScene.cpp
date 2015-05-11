@@ -16,6 +16,9 @@ Scene* GameScene::createScene()
 	auto scene = Scene::createWithPhysics();
 	scene->getPhysicsWorld()->setGravity(Vect(0, 0));
 
+	//物理调试绘图
+	//scene->getPhysicsWorld()->setDebugDrawMask(PhysicsWorld::DEBUGDRAW_ALL);
+
 	m_gamelayer = GameScene::create();
 	scene->addChild(m_gamelayer);
 
@@ -74,7 +77,10 @@ bool GameScene::init()
 	auto hero = PlaneHero::create();
 	addChild(hero, 0, HERO_TAG);
 	hero->setPosition(Vec2(winSize.width / 2, hero->getContentSize().height / 2 + 10));
-	auto herobody = PhysicsBody::createBox(hero->getContentSize());
+	//auto herobody = PhysicsBody::createBox(hero->getContentSize()); //这样设置不太精准
+	auto herobody = PhysicsBody::create();
+	Vec2 verts[] = {Vec2(0, 55), Vec2(50, -30), Vec2(-50, -30)};  //根据点组成一个多边形
+	herobody->addShape(PhysicsShapeEdgePolygon::create(verts, 3));
 	herobody->setCollisionBitmask(0x0); //不进行碰撞模拟
 	herobody->setContactTestBitmask(HERO_CONTACTMASKBIT);
 	hero->setPhysicsBody(herobody);
@@ -425,9 +431,39 @@ void GameScene::refreshAnEnemy(float dt)
 	enemy->setPosition(Vec2(random(min, max), winSize.height + enemy->getContentSize().height / 2));
 
 	//给敌机一个body
-	auto enemybody = PhysicsBody::createBox(enemy->getContentSize());
+	Vec2 vec[10]; //存放敌方战机的多边形点
+	memset(vec, 0, sizeof(vec));
+	int vec_count = 0;
+	switch (enemy_type)
+	{
+	case PlaneEnemy::Enemy1:
+		vec[0] = Vec2(0, -17);
+		vec[1] = Vec2(-22, 5);
+		vec[2] = Vec2(22, 5);
+		vec_count = 3;
+		break;
+	case PlaneEnemy::Enemy2:
+		vec[0] = Vec2(0, -40);
+		vec[1] = Vec2(-40, 0);
+		vec[2] = Vec2(0, 45);
+		vec[3] = Vec2(40, 0);
+		vec_count = 4;
+		break;
+	default:
+		vec[0] = Vec2(50, -100);
+		vec[1] = Vec2(-50, -100);
+		vec[2] = Vec2(-54, -85);
+		vec[3] = Vec2(-54, 90);
+		vec[4] = Vec2(54, 90);
+		vec[5] = Vec2(67, -88);
+		vec_count = 6;
+		break;
+	}
+
+	//auto enemybody = PhysicsBody::createBox(enemy->getContentSize());
+	auto enemybody = PhysicsBody::create();
+	enemybody->addShape(PhysicsShapePolygon::create(vec, vec_count));
 	enemybody->setCollisionBitmask(0x0); //不进行碰撞模拟，因为不需要
 	enemybody->setContactTestBitmask(ContactMaskBit::ENEMY_CONTACTMASKBIT);
 	enemy->setPhysicsBody(enemybody);
 }
-

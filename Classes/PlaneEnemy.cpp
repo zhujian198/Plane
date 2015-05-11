@@ -106,6 +106,40 @@ void PlaneEnemy::getHurt()
 		m_live = false;
 		return;
 	}
+	else if (m_planeType != Enemy1) //初级战机没有受伤动画
+	{
+		//播放受伤动画
+		SpriteFrame *hurt = nullptr;
+		SpriteFrame *old = nullptr;
+		switch (m_planeType)
+		{
+		case Enemy2:
+			hurt = SpriteFrameCache::getInstance()->getSpriteFrameByName("enemy2_hit.png");
+			old = SpriteFrameCache::getInstance()->getSpriteFrameByName("enemy2.png");
+			break;
+		case Enemy3:
+			hurt = SpriteFrameCache::getInstance()->getSpriteFrameByName("enemy3_hit.png");
+			old = SpriteFrameCache::getInstance()->getSpriteFrameByName("enemy3_n1.png");
+			break;
+		case Enemy4:
+			hurt = SpriteFrameCache::getInstance()->getSpriteFrameByName("enemy3_hit.png");
+			old = SpriteFrameCache::getInstance()->getSpriteFrameByName("enemy3_n2.png");
+			break;
+		}
+
+		auto setHurtImg = CallFunc::create([this, hurt](){
+			this->setSpriteFrame(hurt);
+		});
+
+		auto setOldImg = CallFunc::create([this, old](){
+			this->setSpriteFrame(old);
+		});
+
+		auto hurtAction = Sequence::create(setHurtImg, DelayTime::create(0.2), setOldImg, nullptr);
+
+		this->stopAllActions();
+		this->runAction(hurtAction);
+	}
 }
 
 void PlaneEnemy::initEnemyBlowUpFrames(int planetype)
@@ -115,6 +149,7 @@ void PlaneEnemy::initEnemyBlowUpFrames(int planetype)
 		m_blowframes.pushBack(SpriteFrameCache::getInstance()->getSpriteFrameByName("enemy1_down1.png"));
 		m_blowframes.pushBack(SpriteFrameCache::getInstance()->getSpriteFrameByName("enemy1_down2.png"));
 		m_blowframes.pushBack(SpriteFrameCache::getInstance()->getSpriteFrameByName("enemy1_down3.png"));
+		m_blowframes.pushBack(SpriteFrameCache::getInstance()->getSpriteFrameByName("enemy1_down4.png"));
 	}
 	
 	else if (planetype == EnemyPlaneType::Enemy2)
