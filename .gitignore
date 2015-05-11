@@ -11,4 +11,4 @@ proj.win32/
 proj.wp8-xaml/
 CMakeLists.txt
 .cocos-project.json
-
+bin/

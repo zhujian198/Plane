@@ -15,7 +15,8 @@ public:
 		HERO_TAG = 100,
 		ENEMY_TAG = 101,
 		HERO_BULLET_TAG = 102,
-		SCORE_LABEL = 103
+		SCORE_LABEL = 103,
+		PAUSE_MENU = 104
 	};
 
 	//碰撞事件bit位
@@ -38,9 +39,9 @@ public:
 	//level提升所需的分数
 	enum LevelUp_Score
 	{
-		Level1Up_Score = 10,
-		Level2Up_Score = 50,
-		Level3Up_Score = 100
+		Level1Up_Score = 100,
+		Level2Up_Score = 500,
+		Level3Up_Score = 1000
 	};
 
 	static const float refresh_delay[]; //战机刷新间隔

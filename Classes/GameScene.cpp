@@ -61,7 +61,7 @@ bool GameScene::init()
 	pauseButton->setPosition(Vec2(winSize.width / 2 - pauseButton->getContentSize().width, winSize.height / 2 - pauseButton->getContentSize().height)); //位于左上角
 	
 	auto menu = Menu::create(pauseButton, nullptr);
-	addChild(menu);
+	addChild(menu, 10, PAUSE_MENU);
 
 	//加入一个分数栏
 	m_score = 0;
@@ -79,16 +79,11 @@ bool GameScene::init()
 	herobody->setContactTestBitmask(HERO_CONTACTMASKBIT);
 	hero->setPhysicsBody(herobody);
 
-	//加入子弹渲染集合
-	m_bulletBox = SpriteBatchNode::createWithTexture(hero->getTexture()); //这里获得的是一张纹理大图（整张png）
-	addChild(m_bulletBox);
-
 	//加入一个触摸监听，用来移动我方战机
 	auto touchlistener = EventListenerTouchOneByOne::create();
 	touchlistener->setSwallowTouches(true);
 	touchlistener->onTouchBegan = [this](Touch *pTouch, Event*) {
-		/* 
-		 * 如果要触摸着飞机移动，关闭该注释，否则滑动屏幕即可移动
+		//触摸着飞机移动
 		auto hero = (PlaneHero*)getChildByTag(HERO_TAG);
 		if (hero->boundingBox().containsPoint(pTouch->getLocation()))
 		{
@@ -96,11 +91,9 @@ bool GameScene::init()
 			return true;
 		}
 		else return false;
-		*/
-		return true;
 	};
 	touchlistener->onTouchMoved = [this](Touch* pTouch, Event*) {
-		auto delta = pTouch->getDelta() / 3;
+		auto delta = pTouch->getDelta();
 		auto hero = (PlaneHero*)getChildByTag(HERO_TAG);
 		auto oldpos = hero->getPosition(); //用来重置出界后的位置
 
@@ -116,6 +109,10 @@ bool GameScene::init()
 	};
 	_eventDispatcher->addEventListenerWithSceneGraphPriority(touchlistener, this);	
 
+	//加入子弹渲染集合
+	m_bulletBox = SpriteBatchNode::createWithTexture(hero->getTexture()); //这里获得的是一张纹理大图（整张png）
+	addChild(m_bulletBox);
+
 	//加入碰撞事件监听
 	auto contactlistener = EventListenerPhysicsContact::create();
 	contactlistener->onContactBegin = CC_CALLBACK_1(GameScene::dealWithContact, this);
@@ -126,7 +123,7 @@ bool GameScene::init()
 	schedule(schedule_selector(GameScene::testLevel), 1.0f);
 
 	//设置初始敌机刷新间隔并开始刷新
-	schedule(schedule_selector(GameScene::refreshAnEnemy), refresh_delay[0]);
+	schedule(schedule_selector(GameScene::refreshAnEnemy), refresh_delay[LEVEL1]);
 	
 	//每隔5秒可以刷新一次boss战机
 	m_canBossRefresh = true;
@@ -198,19 +195,49 @@ void GameScene::gameover()
 void GameScene::pauseButtonCallBack(Ref* pSender)
 {
 	//log("press pause button!");
+
+	/*
+	 *  暂停/开启 步骤：
+	 *1.关闭/开启 触摸监听
+	 *2.遍历子节点，把除了暂停按钮的 关闭/开启 渲染(onExit)
+	 *3.关闭/开启 敌机的刷新schedule
+	 *4.关闭/开启 物理引擎的模拟
+	*/
 	static int i = 0;
 	if (0 == i)
 	{
 		i = 1;
-		//暂停游戏并关闭事件监听（Director的暂停并没有为我们关闭事件监听，因此还需要手动关闭）
+
 		_eventDispatcher->pauseEventListenersForTarget(this);
-		Director::getInstance()->pause();
+		
+		auto vec = this->getChildren();
+		for (auto &child : vec)
+		{
+			if (child->getTag() != PAUSE_MENU)
+				child->onExit();
+		}
+
+		unschedule(schedule_selector(GameScene::refreshAnEnemy));
+
+		((Scene*)this->getParent())->getPhysicsWorld()->setAutoStep(false);
+		
 	}
 	else
 	{
 		i = 0;
+
 		_eventDispatcher->resumeEventListenersForTarget(this);
-		Director::getInstance()->resume();
+		
+		auto vec = this->getChildren();
+		for (auto &child : vec)
+		{
+			if (child->getTag() != PAUSE_MENU)
+				child->onEnter();
+		}
+
+		schedule(schedule_selector(GameScene::refreshAnEnemy), refresh_delay[m_level]);
+
+		((Scene*)this->getParent())->getPhysicsWorld()->setAutoStep(true);
 	}
 }
 
@@ -324,6 +351,8 @@ bool GameScene::dealWithContact(PhysicsContact& contact)
 
 void GameScene::testLevel(float dt)
 {
+	int oldlevel = m_level;
+
 	//根据到达的分数，设置LEVEL
 	if (m_score > Level1Up_Score && m_score < Level2Up_Score)
 		m_level = LEVEL2;
@@ -332,26 +361,28 @@ void GameScene::testLevel(float dt)
 	else if (m_score > Level3Up_Score)
 		m_level = LEVEL4;
 
+	//如果level没变化，不需要更改刷新速度
+	if (oldlevel == m_level)
+		return;
+
 	//根据level重置战机刷新速率
 	switch (m_level)
 	{
 	case Level1Up_Score: 
 		m_level = LEVEL2;
 		//log("level up!");
-		schedule(schedule_selector(GameScene::refreshAnEnemy), refresh_delay[1]); //更新战机刷新速度
 		break;
 	case Level2Up_Score: 
 		m_level = LEVEL3;
 		//log("level3!");
-		schedule(schedule_selector(GameScene::refreshAnEnemy), refresh_delay[2]);
 		break;
 	case Level3Up_Score: 
 		m_level = LEVEL4;
 		//log("level4!");
-		schedule(schedule_selector(GameScene::refreshAnEnemy), refresh_delay[3]); 
 		break;
 	}
 	
+	schedule(schedule_selector(GameScene::refreshAnEnemy), refresh_delay[m_level]); //更新战机刷新速度
 }
 
 void GameScene::refreshAnEnemy(float dt)

@@ -23,7 +23,7 @@ bool AppDelegate::applicationDidFinishLaunching() {
     auto director = Director::getInstance();
     auto glview = director->getOpenGLView();
     if(!glview) {
-		glview = GLViewImpl::createWithRect("Plane", Rect(0, 0, 540, 960)); //设置PC端的设备分辨率，窗口名。在移动端这行代码无效。
+		glview = GLViewImpl::createWithRect("Plane", Rect(0, 0, 270, 480)); //设置PC端的设备分辨率，窗口名。在移动端这行代码无效。
         director->setOpenGLView(glview);
     }
 
