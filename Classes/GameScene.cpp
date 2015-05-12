@@ -308,7 +308,7 @@ void GameScene::hitEnemy(PlaneEnemy* enemy)
 {
 	enemy->getHurt();
 		
-	//如果敌方飞机挂了，增加分数，将其移除出渲染树
+	//如果敌方飞机挂了，增加分数
 	if (!enemy->isLive())
 	{
 		m_score += enemy->getPoints();
@@ -316,40 +316,13 @@ void GameScene::hitEnemy(PlaneEnemy* enemy)
 		sprintf(buf, "Score: %d", m_score);
 		auto scorelabel = (Label*)this->getChildByTag(SCORE_LABEL);
 		scorelabel->setString(buf);
-		
-		//由于敌方飞机爆炸有一定时间，不能立即删除敌方飞机，因此执行一个延迟动作，等待1.2秒再删除飞机
-		auto node = Node::create();
-		addChild(node);
-
-		auto waitBlowUp = DelayTime::create(1.2);
-		auto clearEnemy = CallFunc::create([enemy, node]() {
-			enemy->removeFromParent();
-			node->removeFromParent();
-			//log("enemy cleared!");
-		});
-			
-		node->runAction(Sequence::create(waitBlowUp, clearEnemy, nullptr));
 	}
 }
 
 void GameScene::hitHero(PlaneHero* hero)
 {
-	//我机直接死亡，等待爆炸时间结束后，清除我方战机，结束游戏
+	//我机直接死亡
 	hero->dead();
-
-	auto node = Node::create();
-	addChild(node);
-
-	auto clearHero = CallFunc::create([this]() {
-		this->removeChildByTag(HERO_TAG);
-	});
-
-	auto gameoverCall = CallFunc::create([this]() {
-		//log("call gameover!");
-		this->gameover();
-	});
-
-	node->runAction(Sequence::create(DelayTime::create(1.5), clearHero, gameoverCall, nullptr));
 }
 
 void GameScene::testLevel(float dt)

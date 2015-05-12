@@ -95,12 +95,13 @@ void PlaneEnemy::blowUp()
 	animation->setRestoreOriginalFrame(true);
 	auto blowUp = Animate::create(animation);
 
-	//爆炸完后隐藏
-	auto hide = CallFunc::create([this]() {
-		this->setVisible(false);
+	//爆炸完后清除
+	auto clear = CallFunc::create([this]() {
+		removeFromParent();
+		//log("enemy cleared!");
 	});
 
-	this->runAction(Sequence::create(blowUp, hide, nullptr));
+	this->runAction(Sequence::create(blowUp, clear, nullptr));
 }
 
 void PlaneEnemy::getHurt()

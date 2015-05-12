@@ -62,6 +62,7 @@ private:
 
 public:
 	SpriteBatchNode* getBulletBox() { return m_bulletBox; }	 //获取子弹渲染器
+	void gameover();
 
 private:
 	SpriteBatchNode *m_bulletBox; //存放子弹的渲染器
@@ -73,7 +74,6 @@ private:
 private:
 	void playBackground(); //创建并移动游戏背景
 	void publishScore(); //存储游戏分数
-	void gameover();
 
 	void pauseButtonCallBack(Ref* pSender); //点击暂停按钮回调函数
 

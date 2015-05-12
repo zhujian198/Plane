@@ -46,12 +46,14 @@ void PlaneHero::blowUp()
 
 	auto blowUp = Animate::create(animation);
 	
-	//爆炸完后隐藏
-	auto hide = CallFunc::create([this]() {
-		this->setVisible(false);
+	//爆炸完后结束游戏
+	auto gameoverCall = CallFunc::create([this]() {
+		//log("call gameover!");
+		removeFromParent();
+		GameScene::sharedGameLayer()->gameover();
 	});
 
-	this->runAction(Sequence::create(blowUp, hide, nullptr));
+	this->runAction(Sequence::create(blowUp, gameoverCall, nullptr));
 }
 
 void PlaneHero::beginShooting(float dt)
