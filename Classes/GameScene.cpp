@@ -8,7 +8,7 @@ using namespace CocosDenshion;
 
 GameScene* GameScene::m_gamelayer = nullptr;
 
-const float GameScene::refresh_delay[] = {2.0, 1.5, 1.0, 0.5}; //战机刷新间隔
+const float GameScene::refresh_delay[] = {2.0, 1.5, 1.0, 0.5, 0.2}; //战机刷新间隔
 
 Scene* GameScene::createScene()
 {
@@ -334,30 +334,15 @@ void GameScene::testLevel(float dt)
 		m_level = LEVEL2;
 	else if (m_score > Level2Up_Score && m_score < Level3Up_Score)
 		m_level = LEVEL3;
-	else if (m_score > Level3Up_Score)
+	else if (m_score > Level3Up_Score && m_score < Level4Up_Score)
 		m_level = LEVEL4;
+	else if (m_score > Level4Up_Score)
+		m_level = LEVEL5;
 
 	//如果level没变化，不需要更改刷新速度
 	if (oldlevel == m_level)
 		return;
 
-	//根据level重置战机刷新速率
-	switch (m_level)
-	{
-	case Level1Up_Score: 
-		m_level = LEVEL2;
-		//log("level up!");
-		break;
-	case Level2Up_Score: 
-		m_level = LEVEL3;
-		//log("level3!");
-		break;
-	case Level3Up_Score: 
-		m_level = LEVEL4;
-		//log("level4!");
-		break;
-	}
-	
 	schedule(schedule_selector(GameScene::refreshAnEnemy), refresh_delay[m_level]); //更新战机刷新速度
 }
 
@@ -384,6 +369,12 @@ void GameScene::refreshAnEnemy(float dt)
 		else enemy_type = random(0, 1);
 		break;
 	case LEVEL4:
+		enemy_type = random(0, 3);
+		if (m_canBossRefresh && enemy_type >= 2)
+			m_canBossRefresh = false;
+		else enemy_type = random(0, 1);
+		break;
+	case LEVEL5:
 		enemy_type = random(0, 3);
 		if (m_canBossRefresh && enemy_type >= 2)
 			m_canBossRefresh = false;

@@ -36,7 +36,8 @@ public:
 		LEVEL1,
 		LEVEL2,
 		LEVEL3,
-		LEVEL4
+		LEVEL4,
+		LEVEL5
 	};
 
 	//level提升所需的分数
@@ -44,7 +45,8 @@ public:
 	{
 		Level1Up_Score = 50,
 		Level2Up_Score = 200,
-		Level3Up_Score = 500
+		Level3Up_Score = 500,
+		Level4Up_Score = 1000
 	};
 
 	static const float refresh_delay[]; //战机刷新间隔
