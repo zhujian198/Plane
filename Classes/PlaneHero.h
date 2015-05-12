@@ -16,16 +16,14 @@ public:
 	void onEnter();
 
 public:
-	FiniteTimeAction* getBlowUpAction(); //飞机爆炸
-	bool isLive() { return m_live; } //返回飞机是否还活着
+	void dead(); //飞机挂掉
 
 private:
 	void beginShooting(float dt); //开始发射子弹，间隔dt秒发射一发
 	void removeBullet(float dt); //移除射到屏幕外面的子弹
 	void stopShooting(); //停止发射子弹
 
-private:
-	bool m_live; //飞机是否活着的标志
+	void blowUp(); //飞机爆炸
 };
 
 #endif

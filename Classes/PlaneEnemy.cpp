@@ -70,9 +70,9 @@ void PlaneEnemy::onEnter()
 	schedule(schedule_selector(PlaneEnemy::moveOn)); //战机进入后，开始移动
 }
 
-FiniteTimeAction* PlaneEnemy::getBlowUpAction()
+void PlaneEnemy::blowUp()
 {
-	//这里直接播放音效设计的不好，因为其它类调用后不一定马上执行动作。不过一般是马上执行的，所以影响不大。
+	//根据战机类型播放音效
 	switch (m_planeType)
 	{
 	case Enemy1:
@@ -95,7 +95,12 @@ FiniteTimeAction* PlaneEnemy::getBlowUpAction()
 	animation->setRestoreOriginalFrame(true);
 	auto blowUp = Animate::create(animation);
 
-	return blowUp;
+	//爆炸完后隐藏
+	auto hide = CallFunc::create([this]() {
+		this->setVisible(false);
+	});
+
+	this->runAction(Sequence::create(blowUp, hide, nullptr));
 }
 
 void PlaneEnemy::getHurt()
@@ -104,6 +109,8 @@ void PlaneEnemy::getHurt()
 	if (m_life == 0)
 	{
 		m_live = false;
+		getPhysicsBody()->setContactTestBitmask(0x0); ////设置碰撞标志位，不再发生碰撞事件
+		blowUp(); //播放爆炸动画
 		return;
 	}
 	else if (m_planeType != Enemy1) //初级战机没有受伤动画

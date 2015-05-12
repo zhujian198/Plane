@@ -145,9 +145,10 @@ void GameScene::playBackground()
 	int delta = 10; //补缝用的，两个背景紧挨着移动可能出现缝隙
 
 	//播放背景，两个背景的图片是一样的，紧挨着循环播放
+	//注意点：1.轮播图的像素高应该比设备的大一点 2.后面的图应该稍微往前靠一点 这样就不会有缝隙了
 	auto bg1 = Sprite::createWithSpriteFrameName("background.png");
 	bg1->setScaleX(winSize.width / bg1->getContentSize().width);
-	bg1->setScaleY(winSize.height / bg1->getContentSize().height);
+	bg1->setScaleY(winSize.height / bg1->getContentSize().height + 0.01);
 	bg1->setAnchorPoint(Vec2(0, 0));
 	addChild(bg1);
 
@@ -160,7 +161,7 @@ void GameScene::playBackground()
 
 	auto bg2 = Sprite::createWithSpriteFrameName("background.png");
 	bg2->setScaleX(winSize.width / bg2->getContentSize().width);
-	bg2->setScaleY(winSize.height / bg2->getContentSize().height);
+	bg2->setScaleY(winSize.height / bg2->getContentSize().height + 0.01);
 	bg2->setAnchorPoint(Vec2(0, 0));
 	bg2->setPosition(Vec2(0, bg1->getPositionY() + winSize.height - delta));
 	addChild(bg2);
@@ -275,31 +276,10 @@ bool GameScene::dealWithContact(PhysicsContact& contact)
 			enemy =((PlaneEnemy*)node1);
 		}
 
-		enemy->getHurt();
-		
-		//如果敌方飞机没血了，让其爆炸
-		if (!enemy->isLive())
-		{
-			//刷新分数
-			m_score += enemy->getPoints();
-			char buf[100] = {0};
-			sprintf(buf, "Score: %d", m_score);
-			auto scorelabel = (Label*)this->getChildByTag(SCORE_LABEL);
-			scorelabel->setString(buf);
-
-			enemy->getPhysicsBody()->setContactTestBitmask(0x0); //设置碰撞标志位，不再发生碰撞事件
-			
-			//让敌机爆炸，然后移除出渲染树，分为两个动作按次序执行
-			auto callfunc = CallFunc::create([enemy]()
-			{
-				enemy->removeFromParent();
-			});
-			auto blowUpAction = enemy->getBlowUpAction();
-			enemy->runAction(Sequence::create(blowUpAction, callfunc, nullptr));
-		}
+		hitEnemy(enemy);
 	}
 
-	//如果碰撞的是我方战机和敌机，我方直接挂掉
+	//如果碰撞的是我方战机和敌机
 	if ((tag1 == HERO_TAG && tag2 == ENEMY_TAG) || (tag2 == HERO_TAG && tag1 == ENEMY_TAG))
 	{
 		_eventDispatcher->removeEventListenersForType(EventListener::Type::TOUCH_ONE_BY_ONE); //不再接受触摸事件
@@ -317,42 +297,60 @@ bool GameScene::dealWithContact(PhysicsContact& contact)
 			enemy = ((PlaneEnemy*)node1);
 		}
 
-		hero->getPhysicsBody()->setContactTestBitmask(0x0); //设置碰撞标志位，不再发生碰撞事件
-
-		//我机爆炸，然后移除出渲染树，分为两个动作按次序执行
-		auto callfunc = CallFunc::create([hero, this]()
-		{
-			hero->removeFromParent();
-			gameover();
-		});
-		auto blowUpAction = ((PlaneHero*)hero)->getBlowUpAction();
-		hero->runAction(Sequence::create(blowUpAction, callfunc, nullptr));
-
-		enemy->getHurt();
-		
-		//如果敌方飞机没血了，让其爆炸
-		if (!enemy->isLive())
-		{
-			//刷新分数
-			m_score += enemy->getPoints();
-			char buf[100] = {0};
-			sprintf(buf, "Score: %d", m_score);
-			auto scorelabel = (Label*)this->getChildByTag(SCORE_LABEL);
-			scorelabel->setString(buf);
-
-			enemy->getPhysicsBody()->setContactTestBitmask(0x0); //设置碰撞标志位，不再发生碰撞事件
-			
-			//让敌机爆炸，然后移除出渲染树，分为两个动作按次序执行
-			auto callfunc = CallFunc::create([enemy]()
-			{
-				enemy->removeFromParent();
-			});
-			auto blowUpAction = enemy->getBlowUpAction();
-			enemy->runAction(Sequence::create(blowUpAction, callfunc, nullptr));
-		}
+		hitEnemy(enemy);
+		hitHero(hero);
 	}
 
 	return true;
+}
+
+void GameScene::hitEnemy(PlaneEnemy* enemy)
+{
+	enemy->getHurt();
+		
+	//如果敌方飞机挂了，增加分数，将其移除出渲染树
+	if (!enemy->isLive())
+	{
+		m_score += enemy->getPoints();
+		char buf[100] = {0};
+		sprintf(buf, "Score: %d", m_score);
+		auto scorelabel = (Label*)this->getChildByTag(SCORE_LABEL);
+		scorelabel->setString(buf);
+		
+		//由于敌方飞机爆炸有一定时间，不能立即删除敌方飞机，因此执行一个延迟动作，等待0.8秒再删除飞机
+		auto node = Node::create();
+		addChild(node);
+
+		auto waitBlowUp = DelayTime::create(0.8);
+		auto clearEnemy = CallFunc::create([enemy, node]() {
+			if (enemy->getParent())
+			{
+				enemy->removeFromParent();
+				node->removeFromParent();
+			}
+		});
+			
+		node->runAction(Sequence::create(waitBlowUp, clearEnemy, nullptr));
+	}
+}
+
+void GameScene::hitHero(PlaneHero* hero)
+{
+	//我机直接死亡，等待爆炸时间结束后，清除我方战机，再等片刻，结束游戏
+	hero->dead();
+
+	auto node = Node::create();
+	addChild(node);
+
+	auto clearHero = CallFunc::create([hero, node, this]() {
+		hero->removeFromParent();
+	});
+	auto gameover = CallFunc::create([node, this]() {
+		node->removeFromParent();
+		this->gameover();
+	});
+
+	node->runAction(Sequence::create(DelayTime::create(0.8), clearHero, DelayTime::create(0.2), gameover, nullptr));
 }
 
 void GameScene::testLevel(float dt)

@@ -19,10 +19,10 @@ public:
 
 	enum EnemyPlaneVec
 	{
-		Enemy1_Vec = 100,
-		Enemy2_Vec = 80,
+		Enemy1_Vec = 150,
+		Enemy2_Vec = 100,
 		Enemy3_Vec = 50,
-		Enemy4_Vec = 30
+		Enemy4_Vec = 50
 	}; //战机速度
 
 	enum EnemyLife
@@ -49,7 +49,6 @@ public:
 	void onEnter();
 
 public:
-	FiniteTimeAction* getBlowUpAction(); //获得飞机爆炸的动作
 	void getHurt(); //飞机被击中一次
 	bool isLive() { return m_live; }; 
 	int getPoints() { return m_points; }
@@ -58,6 +57,7 @@ public:
 private:
 	void initEnemyBlowUpFrames(int planetype); //加载爆炸纹理图集
 	void moveOn(float dt); //schedule回调，每dt秒移动一段距离
+	void blowUp(); //飞机爆炸
 
 private:
 	int m_velocity; //战机速度

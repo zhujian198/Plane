@@ -7,8 +7,6 @@ using namespace CocosDenshion;
 bool PlaneHero::init()
 {
 	Sprite::init();
-
-	m_live = true;
 	
 	//初始化纹理图
 	initWithSpriteFrameName("hero2.png");
@@ -26,7 +24,13 @@ void PlaneHero::onEnter()
 	schedule(schedule_selector(PlaneHero::removeBullet), 0.1);
 }
 
-FiniteTimeAction* PlaneHero::getBlowUpAction()
+void PlaneHero::dead()
+{
+	getPhysicsBody()->setContactTestBitmask(0x0); ////设置碰撞标志位，不再发生碰撞事件
+	blowUp();
+}
+
+void PlaneHero::blowUp()
 {
 	this->stopShooting();
 	SimpleAudioEngine::getInstance()->playEffect("sound/hero_down.mp3");
@@ -40,15 +44,14 @@ FiniteTimeAction* PlaneHero::getBlowUpAction()
 	animation->setDelayPerUnit(0.2);
 	animation->setRestoreOriginalFrame(true);
 
-	auto animate = Animate::create(animation);
+	auto blowUp = Animate::create(animation);
 	
-	//爆炸完后设置死亡
-	auto callfunc = CallFunc::create([this](){
-		this->m_live = false;
+	//爆炸完后隐藏
+	auto hide = CallFunc::create([this]() {
+		this->setVisible(false);
 	});
-	
-	auto blowUp = Sequence::create(animate, callfunc, nullptr);
-	return blowUp;
+
+	this->runAction(Sequence::create(blowUp, hide, nullptr));
 }
 
 void PlaneHero::beginShooting(float dt)

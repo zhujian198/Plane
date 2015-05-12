@@ -5,6 +5,9 @@
 
 USING_NS_CC;
 
+class PlaneEnemy;
+class PlaneHero;
+
 //游戏主场景层
 class GameScene : public Layer
 {
@@ -75,9 +78,11 @@ private:
 	void pauseButtonCallBack(Ref* pSender); //点击暂停按钮回调函数
 
 	bool dealWithContact(PhysicsContact&); //物理碰撞事件回调函数
+	void hitEnemy(PlaneEnemy* enemy);
+	void hitHero(PlaneHero* hero);
 
-	//以下是游戏中schedule的回调函数
-	void testLevel(float dt); //每秒调用一次，根据分数设置游戏level
+	//游戏中schedule的回调函数
+	void testLevel(float dt); //每秒调用一次，根据当前到达的分数设置游戏level
 	void refreshAnEnemy(float dt); //刷新一架敌方战机
 
 	//m_canBossRefresh表示可否刷新boss，每隔dt秒可以刷新一次
