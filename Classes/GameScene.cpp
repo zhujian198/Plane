@@ -317,17 +317,15 @@ void GameScene::hitEnemy(PlaneEnemy* enemy)
 		auto scorelabel = (Label*)this->getChildByTag(SCORE_LABEL);
 		scorelabel->setString(buf);
 		
-		//由于敌方飞机爆炸有一定时间，不能立即删除敌方飞机，因此执行一个延迟动作，等待0.8秒再删除飞机
+		//由于敌方飞机爆炸有一定时间，不能立即删除敌方飞机，因此执行一个延迟动作，等待1.2秒再删除飞机
 		auto node = Node::create();
 		addChild(node);
 
-		auto waitBlowUp = DelayTime::create(0.8);
+		auto waitBlowUp = DelayTime::create(1.2);
 		auto clearEnemy = CallFunc::create([enemy, node]() {
-			if (enemy->getParent())
-			{
-				enemy->removeFromParent();
-				node->removeFromParent();
-			}
+			enemy->removeFromParent();
+			node->removeFromParent();
+			//log("enemy cleared!");
 		});
 			
 		node->runAction(Sequence::create(waitBlowUp, clearEnemy, nullptr));
@@ -336,21 +334,22 @@ void GameScene::hitEnemy(PlaneEnemy* enemy)
 
 void GameScene::hitHero(PlaneHero* hero)
 {
-	//我机直接死亡，等待爆炸时间结束后，清除我方战机，再等片刻，结束游戏
+	//我机直接死亡，等待爆炸时间结束后，清除我方战机，结束游戏
 	hero->dead();
 
 	auto node = Node::create();
 	addChild(node);
 
-	auto clearHero = CallFunc::create([hero, node, this]() {
-		hero->removeFromParent();
+	auto clearHero = CallFunc::create([this]() {
+		this->removeChildByTag(HERO_TAG);
 	});
-	auto gameover = CallFunc::create([node, this]() {
-		node->removeFromParent();
+
+	auto gameoverCall = CallFunc::create([this]() {
+		//log("call gameover!");
 		this->gameover();
 	});
 
-	node->runAction(Sequence::create(DelayTime::create(0.8), clearHero, DelayTime::create(0.2), gameover, nullptr));
+	node->runAction(Sequence::create(DelayTime::create(1.5), clearHero, gameoverCall, nullptr));
 }
 
 void GameScene::testLevel(float dt)
